@@ -1,13 +1,14 @@
 """Reasoning layer ("the brain"): Groq tool-calling loop.
 
-Phase 3: tools are STUBS — they only log what *would* be called and return
-a canned result. Nothing on this system can be affected yet.
+Phase 4: open_application is REAL (whitelisted in actions.py, every call
+logged). control_browser is still a STUB until Phase 5.
 """
 import json
 import re
 
 from groq import Groq
 
+from actions import open_application as real_open_application
 from config import config
 
 SYSTEM_PROMPT = """You watch a webcam via structured perception events.
@@ -18,9 +19,10 @@ Rules:
 - Only call a tool when the event justifies it. A hand gesture (anything
   other than "None") is the trigger for opening an app or acting in the
   browser. Plain observations (e.g. just a person sitting) need NO tool.
-- open_application(name): request opening an allow-listed app. Use the
-  gesture to pick: Thumb_Up -> terminal, Open_Palm -> browser,
-  Victory -> editor, Pointing_Up -> media. Otherwise say what you see.
+- open_application(name): open an allow-listed app. Allowed names ONLY:
+  browser, editor, calculator, files. Anything else will be refused.
+  Gesture map: Open_Palm -> browser, Victory -> editor,
+  Thumb_Up -> files, Pointing_Up -> calculator. Otherwise say what you see.
 - control_browser(action, target): navigate/click/type/screenshot in Chrome.
 - Otherwise reply with one short observation sentence and no tool call."""
 
@@ -35,7 +37,7 @@ TOOLS = [
                 "properties": {
                     "name": {
                         "type": "string",
-                        "description": "App to open: terminal, browser, editor, media.",
+                        "description": "App to open: browser, editor, calculator, files.",
                     }
                 },
                 "required": ["name"],
@@ -67,6 +69,7 @@ TOOLS = [
 
 
 def stub_open_application(name: str) -> str:
+    # Kept for reference; Phase 4 wires the real implementation below.
     return json.dumps({"status": "stubbed", "would_open": name})
 
 
@@ -77,8 +80,8 @@ def stub_control_browser(action: str, target: str = "") -> str:
 
 
 STUBS = {
-    "open_application": stub_open_application,
-    "control_browser": stub_control_browser,
+    "open_application": real_open_application,  # REAL since Phase 4
+    "control_browser": stub_control_browser,  # still a stub until Phase 5
 }
 
 

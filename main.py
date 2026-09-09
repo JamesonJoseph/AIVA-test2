@@ -43,7 +43,7 @@ def main() -> None:
                     continue
                 print(f"THOUGHT: {out['thought']}", flush=True)
                 for c in out["tool_calls"]:
-                    print(f"STUB CALL: {c['tool']}{c['args']} -> {c['result']}",
+                    print(f"ACTION: {c['tool']}{c['args']} -> {c['result']}",
                           flush=True)
             time.sleep(period)
     except KeyboardInterrupt:
