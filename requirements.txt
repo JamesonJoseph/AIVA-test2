@@ -1,0 +1,22 @@
+# Local Vision Agent — dependencies (frozen from successful install 2026-09-09,
+# venv Python 3.14.6, x86_64 Linux).
+# Perception layer uses MediaPipe Tasks (no ultralytics/YOLO).
+
+# --- perception / capture ---
+mediapipe==1.0.1
+# mediapipe already depends on opencv-contrib-python; listing it explicitly
+# (instead of opencv-python) avoids the cv2 file-overwrite conflict between
+# the opencv-python and opencv-contrib-python wheels.
+opencv-contrib-python==5.0.0.93
+numpy==2.5.3
+
+# --- reasoning ---
+groq==1.7.0
+python-dotenv==1.2.3
+
+# --- web dashboard (Phase 6) ---
+fastapi==0.141.1
+uvicorn==0.52.4
+
+# --- browser control (Phase 5) ---
+playwright==1.62.0
