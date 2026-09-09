@@ -26,6 +26,47 @@ def ensure_model(filename: str, url: str, models_dir: str) -> str:
     return path
 
 
+def to_mp_image(bgr_frame):
+    """Wrap an OpenCV BGR frame as a MediaPipe SRGB image."""
+    rgb = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
+    return mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+
+
+def objects_from(det) -> list:
+    objects = []
+    for d in det.detections:
+        cat = d.categories[0]
+        bb = d.bounding_box
+        objects.append(
+            {
+                "label": cat.category_name,
+                "score": round(float(cat.score), 3),
+                "bbox": {
+                    "x": int(bb.origin_x),
+                    "y": int(bb.origin_y),
+                    "width": int(bb.width),
+                    "height": int(bb.height),
+                },
+            }
+        )
+    return objects
+
+
+def gesture_from(rec) -> dict:
+    gesture = {"name": "None", "score": 0.0, "handedness": None}
+    if rec.gestures and rec.gestures[0]:
+        top = rec.gestures[0][0]
+        handed = None
+        if rec.handedness and rec.handedness[0]:
+            handed = rec.handedness[0][0].category_name
+        gesture = {
+            "name": top.category_name,
+            "score": round(float(top.score), 3),
+            "handedness": handed,
+        }
+    return gesture
+
+
 class Perceiver:
     def __init__(self, cfg=config):
         det_path = ensure_model(
@@ -53,38 +94,7 @@ class Perceiver:
         )
 
     def perceive(self, bgr_frame) -> dict:
-        rgb = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
-        image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-
+        image = to_mp_image(bgr_frame)
         det = self.detector.detect(image)
-        objects = []
-        for d in det.detections:
-            cat = d.categories[0]
-            bb = d.bounding_box
-            objects.append(
-                {
-                    "label": cat.category_name,
-                    "score": round(float(cat.score), 3),
-                    "bbox": {
-                        "x": int(bb.origin_x),
-                        "y": int(bb.origin_y),
-                        "width": int(bb.width),
-                        "height": int(bb.height),
-                    },
-                }
-            )
-
         rec = self.recognizer.recognize(image)
-        gesture = {"name": "None", "score": 0.0, "handedness": None}
-        if rec.gestures and rec.gestures[0]:
-            top = rec.gestures[0][0]
-            handed = None
-            if rec.handedness and rec.handedness[0]:
-                handed = rec.handedness[0][0].category_name
-            gesture = {
-                "name": top.category_name,
-                "score": round(float(top.score), 3),
-                "handedness": handed,
-            }
-
-        return {"objects": objects, "gesture": gesture}
+        return {"objects": objects_from(det), "gesture": gesture_from(rec)}

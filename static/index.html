@@ -37,7 +37,8 @@ const thought = document.getElementById('thought');
 const eventBox = document.getElementById('event');
 const log = document.getElementById('log');
 const status = document.getElementById('status');
-let lastThought = '';
+const seen = new Set();
+let lastThought = '', lastId = 0, frames = 0, fpsT = Date.now(), fps = 0;
 function connect() {
   const ws = new WebSocket('ws://' + location.host + '/ws');
   ws.onopen = () => status.textContent = 'live ●';
@@ -46,6 +47,15 @@ function connect() {
   ws.onmessage = (msg) => {
     const s = JSON.parse(msg.data);
     if (s.frame) video.src = 'data:image/jpeg;base64,' + s.frame;
+    if (s.frame_id && s.frame_id !== lastId) {
+      lastId = s.frame_id; frames++;
+      const now = Date.now();
+      if (now - fpsT >= 2000) {
+        fps = (frames * 1000 / (now - fpsT)).toFixed(1);
+        frames = 0; fpsT = now;
+      }
+      status.textContent = `live ● ${fps} fps (infer ${s.infer_ms} ms)`;
+    }
     eventBox.textContent = JSON.stringify(s.event);
     if (s.thought && s.thought !== lastThought) {
       lastThought = s.thought;
@@ -53,7 +63,9 @@ function connect() {
     }
     (s.actions || []).forEach(a => {
       const line = JSON.stringify(a);
-      if (!log.dataset.seen?.includes(line)) {
+      if (!seen.has(line)) {
+        seen.add(line);
+        if (seen.size > 200) seen.clear();
         const div = document.createElement('div');
         div.className = 'act';
         div.textContent = '▶ ' + a.tool + ' ' + JSON.stringify(a.args)
