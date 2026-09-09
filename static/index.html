@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIVA — live</title>
+<style>
+  body { background: #111; color: #eee; font-family: monospace; margin: 0;
+         display: flex; height: 100vh; }
+  #left { flex: 3; display: flex; align-items: center; justify-content: center;
+          background: #000; }
+  #video { max-width: 100%; max-height: 100vh; }
+  #right { flex: 2; display: flex; flex-direction: column; padding: 12px;
+           gap: 8px; min-width: 280px; }
+  #thought { background: #1d2b1d; border: 1px solid #3a5f3a; padding: 10px;
+             min-height: 3em; }
+  #event { background: #1a1a1a; border: 1px solid #333; padding: 10px;
+           white-space: pre-wrap; word-break: break-all; max-height: 30vh;
+           overflow-y: auto; }
+  #log { flex: 1; overflow-y: auto; background: #0d0d0d;
+         border: 1px solid #333; padding: 10px; }
+  .act { color: #ffd75f; }
+  #status { color: #888; }
+</style>
+</head>
+<body>
+<div id="left"><img id="video" alt="waiting for camera…"></div>
+<div id="right">
+  <div id="status">connecting…</div>
+  <div>THOUGHT</div><div id="thought">—</div>
+  <div>EVENT</div><div id="event">—</div>
+  <div>ACTIONS</div><div id="log"></div>
+</div>
+<script>
+const video = document.getElementById('video');
+const thought = document.getElementById('thought');
+const eventBox = document.getElementById('event');
+const log = document.getElementById('log');
+const status = document.getElementById('status');
+let lastThought = '';
+function connect() {
+  const ws = new WebSocket('ws://' + location.host + '/ws');
+  ws.onopen = () => status.textContent = 'live ●';
+  ws.onclose = () => { status.textContent = 'reconnecting…';
+                       setTimeout(connect, 2000); };
+  ws.onmessage = (msg) => {
+    const s = JSON.parse(msg.data);
+    if (s.frame) video.src = 'data:image/jpeg;base64,' + s.frame;
+    eventBox.textContent = JSON.stringify(s.event);
+    if (s.thought && s.thought !== lastThought) {
+      lastThought = s.thought;
+      thought.textContent = s.thought;
+    }
+    (s.actions || []).forEach(a => {
+      const line = JSON.stringify(a);
+      if (!log.dataset.seen?.includes(line)) {
+        const div = document.createElement('div');
+        div.className = 'act';
+        div.textContent = '▶ ' + a.tool + ' ' + JSON.stringify(a.args)
+                        + ' → ' + JSON.stringify(a.result);
+        log.prepend(div);
+        while (log.children.length > 50) log.lastChild.remove();
+      }
+    });
+  };
+}
+connect();
+</script>
+</body>
+</html>

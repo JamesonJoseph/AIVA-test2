@@ -17,6 +17,7 @@ python-dotenv==1.2.3
 # --- web dashboard (Phase 6) ---
 fastapi==0.141.1
 uvicorn==0.52.4
+websockets==17.1  # WS backend for uvicorn (uvicorn[standard] equivalent)
 
 # --- browser control (Phase 5) ---
 playwright==1.62.0
